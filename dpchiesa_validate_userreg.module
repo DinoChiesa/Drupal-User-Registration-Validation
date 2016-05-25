@@ -48,7 +48,7 @@ function dpchiesa_validate_userreg_validate_register_form(&$form, &$form_state) 
     dpchiesa_validate_userreg_evaluate_all_enabled_checks($form_state['values']);
     
     // // also clean some values?
-    // $values_to_clean = Array('field_first_name','field_last_name');
+    // $values_to_clean = array('field_first_name','field_last_name');
     // $pattern = '/[^\pL ]/';  // not word char or space
     // $replacement = '';
     // foreach ($values_to_clean as $value) {
@@ -148,5 +148,4 @@ function dpchiesa_validate_userreg_admin_form($form, &$form_state) {
   
   return system_settings_form($form);
 }
-
 
