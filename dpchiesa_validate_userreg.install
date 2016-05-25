@@ -1,0 +1,36 @@
+<?php
+/**
+ * @file
+ * Drupal user registration validation - installation
+ * 
+ * This is the install logic for the module that maybe validates user registration information
+ *
+ */
+
+module_load_include('inc', 'dpchiesa_validate_userreg', 'functions');
+
+function dpchiesa_validate_userreg_uninstall() {
+  $varprefix = 'dpchiesa_validate_userreg_';
+  /* legacy */
+  variable_del($varprefix . 'enabled');
+  
+  $available_checks = dpchiesa_validate_userreg_available_checks();
+  foreach($available_checks as $check) {
+    $varname = $varprefix . 'enabled_' . $check['varname'];
+    variable_del($varname);
+  }  
+}
+
+
+function dpchiesa_validate_userreg_install() {
+  $varprefix = 'dpchiesa_validate_userreg_';
+  variable_set($varprefix . 'enabled', variable_get($varprefix . 'enabled', 0));
+  
+  $available_checks = dpchiesa_validate_userreg_available_checks();
+  foreach($available_checks as $check) {
+    $varname = $varprefix . 'enabled_' . $check['varname'];
+    variable_set($varname, variable_get($varname, 0));
+  }
+}
+
+?>

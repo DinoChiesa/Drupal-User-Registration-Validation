@@ -1,0 +1,152 @@
+<?php
+/**
+ * @file
+ * User registration validation
+ * 
+ * Validations for user registration info
+ *
+ */
+
+module_load_include('inc', 'dpchiesa_validate_userreg', 'functions');
+
+
+function dpchiesa_validate_userreg_init() {
+  //   if (arg(0) == 'admin') {
+  //     $path = drupal_get_path('module', 'dpchiesa_validate_userreg');
+  //     // for module-specific css
+  //     drupal_add_css($path . '/dpchiesa_validate_userreg.css');
+  //   }
+}
+
+
+/**
+* Implements hook_form_FORMID_alter() to add validation to the user registration form. 
+* 
+* The corresponding drupal_alter() is called within??
+* 
+*/
+function dpchiesa_validate_userreg_form_user_register_form_alter(&$form, &$form_state, $form_id) {
+  $form['#validate'][] = 'dpchiesa_validate_userreg_validate_register_form';
+}
+
+
+/**
+* Implements hook_form_FORMID_alter() to add validation to the user registration form. 
+* 
+* The corresponding drupal_alter() is called within??
+* 
+*/
+function dpchiesa_validate_userreg_validate_register_form(&$form, &$form_state) {
+  $prefix = 'dpchiesa_validate_userreg';
+  $enabled = variable_get($prefix . '_enabled', 0);
+  if ($enabled > 0) {
+    // watchdog('userreg_validation',
+    //          "form values !values",
+    //          array('!values' => var_export(array_keys($form_state['values']), true)),
+    //          WATCHDOG_WARNING);
+    
+    dpchiesa_validate_userreg_evaluate_all_enabled_checks($form_state['values']);
+    
+    // // also clean some values?
+    // $values_to_clean = Array('field_first_name','field_last_name');
+    // $pattern = '/[^\pL ]/';  // not word char or space
+    // $replacement = '';
+    // foreach ($values_to_clean as $value) {
+    //   $subject = $form_state['values'][$value];
+    //   if (is_array($subject)) {
+    //     $subject = $subject['und'][0]['value'];
+    //     // alter the value 
+    //     $form_state['values'][$value]['und'][0]['value'] = preg_replace($pattern, $replacement, $subject);
+    //   }
+    //   else {
+    //     // alter the value 
+    //     $form_state['values'][$value] = preg_replace($pattern, $replacement, $subject);
+    //   }
+    // }
+    
+  }
+}
+
+
+/**
+ * Implements hook_menu().
+ */
+function dpchiesa_validate_userreg_menu() {
+  $items = array();
+  $items['admin/config/people/userregvalidation'] = array(
+    'title' => 'User Registration Validation',
+    'description' => 'Configuration for validation rules on user info during registration',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('dpchiesa_validate_userreg_admin_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_NORMAL_ITEM
+  );
+  return $items;
+}
+
+
+
+/**
+ * Page callback: Current posts settings
+ *
+ * @see dpchiesa_validate_userreg_menu()
+ */
+function dpchiesa_validate_userreg_admin_form($form, &$form_state) {
+  
+  $prefix = 'dpchiesa_validate_userreg';
+  
+  $form[$prefix] =
+    array('#type'=>'fieldset',
+          '#title'=>t('User Registration Validation'),
+          '#description'=>t('Use these settings to enable specific kinds of validation for user registration information.')
+          );
+
+  // this is the "master switch" for validation
+  $tprefix = '<div class=\'userreg_validation\'>';
+  $tsuffix = '';
+  $form[$prefix][$prefix . '_enabled'] =
+    array('#type'=>'radios',
+          '#title'=>t('validation enabled'),
+          '#prefix' => $tprefix,
+          '#suffix' => $tsuffix,
+          '#options'=>array(0=>t('Off'),1=>t('On')),
+          '#required' => TRUE,
+          '#default_value' => variable_get($prefix . '_enabled', 0)
+          );
+
+  $available_checks = dpchiesa_validate_userreg_available_checks();
+
+  $tprefix = '<table><thead>' .
+    '<tr><th>Description</th><th>Enabled</th></tr>' .
+    '</thead><tbody>' .
+    '<tr><td>';
+  
+  $ix = 0;
+  $num_checks = count($available_checks);
+  foreach ($available_checks as $check) {
+    $ix++;
+    $tprefix .= t($check['description']) . '</td><td>';
+    $tsuffix = '</td></tr>';
+    if ($ix == $num_checks) {
+      $tsuffix .= '</tbody></table></div>';
+    }
+    $fld_attributes = array(); 
+    $varname = $prefix . '_enabled_' . $check['varname'];
+    if (variable_get($varname, 0)) {
+      $fld_attributes['checked'] = 'checked';
+    }
+    $form[$prefix][$varname] =
+      array('#type' => 'checkbox',
+            //'#title'=> t($check['description']),
+            '#prefix' => $tprefix,
+            '#suffix' => $tsuffix,
+            '#attributes' => $fld_attributes
+            );
+
+    $tprefix = '<tr><td>';
+  }
+  
+  return system_settings_form($form);
+}
+
+
