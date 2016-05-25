@@ -48,6 +48,9 @@ function dpchiesa_validate_userreg_form_value($form_values, $name) {
   // In some cases $form_values[$check['subject']] is returning an array.
   // This is because of Drupals auto-translation. 
   // Coerce to a string to allow preg_match to work without warnings.
+  if (!isset($form_values[$name])) {
+    return NULL;
+  }
   $value = $form_values[$name];
   if (is_array($value)) {
     if (isset($value['und'][0]['value'])) {
@@ -66,6 +69,8 @@ function dpchiesa_validate_userreg_apply_check($form_values, $check) {
   // This function will need to get smarter if new checks not involving regex are added.
 
   $subject = dpchiesa_validate_userreg_form_value($form_values, $check['subject']);
+  if ($subject == NULL) { return FALSE; }
+  
   $result = preg_match($check['regex'], $subject);
   if (isset($check['negate']) && $check['negate']) {
     $result = !$result;
@@ -75,6 +80,7 @@ function dpchiesa_validate_userreg_apply_check($form_values, $check) {
 
 
 function dpchiesa_validate_userreg_evaluate_check($form_values, $check) {
+  // TRUE means invalid
   $prefix = 'dpchiesa_validate_userreg';
   $varname = $prefix . '_enabled_' . $check['varname'];
   $check_enabled = variable_get($varname, 0);  
