@@ -2,34 +2,40 @@
 /**
  * @file
  * Drupal user registration validation - installation
- * 
- * This is the install logic for the module that maybe validates user registration information
  *
+ * This is the install logic for the module that maybe validates user registration information
  */
 
 module_load_include('inc', 'dpchiesa_validate_userreg', 'functions');
 
 function dpchiesa_validate_userreg_uninstall() {
-  $varprefix = 'dpchiesa_validate_userreg_';
+  $varprefix = 'dpchiesa_validate_userreg';
   /* legacy */
-  variable_del($varprefix . 'enabled');
-  
+  variable_del($varprefix . '_enabled');
+
   $available_checks = dpchiesa_validate_userreg_available_checks();
   foreach($available_checks as $check) {
-    $varname = $varprefix . 'enabled_' . $check['varname'];
+    $varname = $varprefix . '_enabled_' . $check['name'];
     variable_del($varname);
-  }  
+    if (isset($check['stringvar'])) {
+      $varname = $varprefix . '_' . $check['stringvar'];
+      variable_del($varname);
+    }
+  }
 }
 
 
 function dpchiesa_validate_userreg_install() {
-  $varprefix = 'dpchiesa_validate_userreg_';
-  variable_set($varprefix . 'enabled', variable_get($varprefix . 'enabled', 0));
-  
+  $varprefix = 'dpchiesa_validate_userreg';
+  variable_set($varprefix . '_enabled', variable_get($varprefix . '_enabled', 0));
+
   $available_checks = dpchiesa_validate_userreg_available_checks();
   foreach($available_checks as $check) {
-    $varname = $varprefix . 'enabled_' . $check['varname'];
+    $varname = $varprefix . '_enabled_' . $check['name'];
     variable_set($varname, variable_get($varname, 0));
+    if (isset($check['stringvar'])) {
+      $varname = $varprefix . '_' . $check['stringvar'];
+      variable_set($varname, variable_get($varname, $check['stringdefault']));
+    }
   }
 }
-

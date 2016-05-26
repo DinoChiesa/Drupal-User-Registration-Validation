@@ -1,75 +1,95 @@
 <?php
 /**
- * @file functions.inc
- * supporting functions for Dpchiesa user registration validation
- * 
- * used in the .module and the .install
+ * @file
+ * Supporting functions for Dpchiesa user registration validation.
  *
+ * These functions are used in the .module and the .install
  */
 
 
 function dpchiesa_validate_userreg_available_checks() {
   // A check must return true when the data is invalid.
-  // 
+  //
   // Today, checks are based on regex, and follow this pattern:
-  //   varname : the name (suffix) of the drupal variable that stores the enabled status of the check
+  //   name : the name of the check. Also the suffix of the name of the drupal variable that
+  //          stores the enabled status of the check
   //   description : human-readable description of what the check does, presented to the admin.
   //   reason : human-readable description of the check violation, presented to the user when the check trips
   //   regex : a regular expression
   //   subject : the property in the $form_state['values'] array that the regex is compared against
-  // 
+  //
   // follow the pattern in which when the regex matches the subject.
   $checks = array();
-  $checks[] = array('varname' => 'name_disallow_spaces',
+  $checks[] = array('name' => 'name_disallow_spaces',
                     'description' => 'disallow spaces in usernames',
-                    'reason' => 'spaces are not allowed in the username',
+                    'reason' => 'Spaces are not allowed in the username.',
                     'subject' => 'name',
                     'regex' => '/\s+/');
-  $checks[] = array('varname' => 'name_word_chars_only',
+  $checks[] = array('name' => 'name_word_chars_only',
                     'description' => 'disallow non-word characters and spaces in usernames',
-                    'reason' => 'spaces and most non-word characters are disallowed in the username',
-                    'subject' => 'name', 
+                    'reason' => 'Spaces and most non-word characters are disallowed in the username.',
+                    'subject' => 'name',
                     'negate' => true,
                     'regex' => '/^\pL[\pL0-9_]+$/');
-  $checks[] = array('varname' => 'firstname_word_chars_only',
-                    'description' => 'disallow non-word characters in usernames',
-                    'reason' => 'non-word characters are not allowed in the firstname',
+  $checks[] = array('name' => 'firstname_word_chars_only',
+                    'description' => 'disallow non-word characters in firstnames',
+                    'reason' => 'Non-word characters are not allowed in the firstname.',
                     'subject' => 'field_first_name',
                     'negate' => true,
                     'regex' => '/^\pL[\pL ]+$/'); // \pL means "word character" incl Unicode
-  $checks[] = array('varname' => 'lastname_word_chars_only',
-                    'description' => 'disallow non-word characters in usernames',
-                    'reason' => 'non-word characters are not allowed in the lastname',
+  $checks[] = array('name' => 'lastname_word_chars_only',
+                    'description' => 'disallow non-word characters in lastnames',
+                    'reason' => 'Non-word characters are not allowed in the lastname.',
                     'subject' => 'field_last_name',
                     'negate' => true,
                     'regex' => '/^\pL[\pL ]+$/');
 
-  $domains = array('yahoo',
-           'googlemail', 'gmail',
-           'hotmail', 'live', 'outlook',
-           'dispostable', 'maildrop', 'tafmail', '6paq', 'mailinator', 'harakirimail', 'yopmail', '33mail');
+  $domains = array('yahoo', 'googlemail', 'gmail', 'hotmail', 'live', 'outlook',
+                   'mailinator', 'dispostable', 'maildrop', 'tafmail', '6paq', 'harakirimail', 'yopmail',
+                   '33mail');
   $slug = implode('|', $domains);
-  $checks[] = array('varname' => 'email_disallow_free',
+  $checks[] = array('name' => 'email_disallow_free',
                     'description' => 'disallow free email (yahoo, gmail, hotmail, mailinator, etc)',
-                    'reason' => 'invalid email',
-                    'subject' => 'mail', 
+                    'reason' => 'invalid email address',
+                    'subject' => 'mail',
                     'regex' => '/@(' . $slug . ')\./');
+
+  $checks[] = array('name' => 'email_domain_whitelist',
+                    'description' => 'allow registration only from specific email domains',
+                    'reason' => 'Email addresses from that domain are not approved for accounts here.',
+                    'subject' => 'mail',
+                    'stringvar' => 'whitelisted_email_domains',
+                    'stringdefault' => dpchiesa_validate_userreg_drupal_hostname(),
+                    'stringdescription' => 'a comma-separated list of email domains to whitelist, eg "example.org, apigee.com". Do not include quotes.',
+                    'function' => 'dpchiesa_validate_userreg_evaluate_email_domain_whitelist');
+
   return $checks;
 }
 
 
 function dpchiesa_validate_userreg_form_value($form_values, $name) {
   // In some cases $form_values[$check['subject']] is returning an array.
-  // This is because of Drupals auto-translation. 
-  // Coerce to a string to allow preg_match to work without warnings.
+  // This is because of Drupals auto-translation.
+  // In those cases, dereference the language-neutral value.
   if (!isset($form_values[$name])) {
     return NULL;
   }
   $value = $form_values[$name];
   if (is_array($value)) {
     $value = (isset($value['und'][0]['value'])) ? $value['und'][0]['value'] : var_export($value, true);
-  } 
+  }
   return $value;
+}
+
+
+function dpchiesa_validate_userreg_evaluate_email_domain_whitelist($subject) {
+  $prefix = 'dpchiesa_validate_userreg_';
+  $varname = $prefix . 'whitelisted_email_domains';
+  $domainlist = variable_get($varname, "apigee.com");
+  $domains = array_map('preg_quote', array_map('trim', explode(',', $domainlist)));
+  $slug = implode('|', $domains);
+  $regex = '/@(' . $slug . ')$/';
+  return !preg_match($regex, $subject); // invert because, TRUE = invalid
 }
 
 
@@ -77,44 +97,80 @@ function dpchiesa_validate_userreg_apply_check($form_values, $check) {
   // A check returns true when the regex matches the subject.
   // TRUE implies invalid form data.
   //
-  // Today, all checks are regex based. 
+  // Today, all checks are regex based.
   // This function will need to get smarter if other kinds of checks are added.
 
   $subject = dpchiesa_validate_userreg_form_value($form_values, $check['subject']);
   if ($subject === NULL) {
     return FALSE;
   }
-  
-  $result = preg_match($check['regex'], $subject);
-  if (isset($check['negate']) && $check['negate']) {
+
+  $result = FALSE;
+  if (isset($check['regex'])) {
+    $result = preg_match($check['regex'], $subject);
+  }
+  elseif (isset($check['function'])) {
+    $result = call_user_func($check['function'], $subject);
+  }
+  else {
+    $result = "invalid rule";
+  }
+
+  if (is_bool($result) && isset($check['negate']) && $check['negate']) {
     $result = !$result;
   }
+
   return $result;
 }
 
 
-function dpchiesa_validate_userreg_evaluate_check($form_values, $check) {
+function dpchiesa_validate_userreg_evaluate_check($form_values, $check, &$diagnostics) {
   // TRUE means invalid
   $prefix = 'dpchiesa_validate_userreg';
-  $varname = $prefix . '_enabled_' . $check['varname'];
-  $check_enabled = variable_get($varname, 0);  
-  $result = $check_enabled && dpchiesa_validate_userreg_apply_check($form_values, $check);
-  // watchdog('userreg_validation',
-  //          "check !check, enabled: !enabled, value: !value, result: !result",
-  //          array('!check' => $check['varname'],
-  //                '!enabled' => $check_enabled,
-  //                '!value' => dpchiesa_validate_userreg_form_value($form_values, $check['subject']),
-  //                '!result' => var_export($result,true)),
-  //          WATCHDOG_WARNING);
-  return $result;
+  $varname = $prefix . '_enabled_' . $check['name'];
+  $check_enabled = variable_get($varname, 0);
+  $result = ($check_enabled) ? dpchiesa_validate_userreg_apply_check($form_values, $check) : FALSE;
+
+  $diagnostics[] = sprintf("%s enabled(%s) value(%s) result(%s)",
+                          $check['name'],
+                          $check_enabled,
+                          dpchiesa_validate_userreg_form_value($form_values, $check['subject']),
+                          var_export($result, true));
+  return ($result === TRUE);
 }
 
 
 function dpchiesa_validate_userreg_evaluate_all_enabled_checks($form_values) {
+  $prefix = 'dpchiesa_validate_userreg';
   $available_checks = dpchiesa_validate_userreg_available_checks();
+  $diagnostics = array();
   foreach ($available_checks as $check) {
-    if (dpchiesa_validate_userreg_evaluate_check($form_values, $check)) { 
+    if (dpchiesa_validate_userreg_evaluate_check($form_values, $check, $diagnostics)) {
       form_set_error($check['subject'], t($check['reason']));
     }
   }
+
+  // optionally log this particular round of checks
+  if (variable_get($prefix . '_logging', 0)) {
+    watchdog('userreg_validation',
+             "!message", array('!message' => implode(', ', $diagnostics)),
+             WATCHDOG_NOTICE);
+  }
+}
+
+
+
+function dpchiesa_validate_userreg_drupal_hostname() {
+  global $GLOBALS;
+  // $GLOBALS['base_url'] refers to the root URL for the site, eg,
+  //  == https://foo.bar.bam
+
+  $hostname = $GLOBALS['base_url'];
+  if (strpos($hostname, 'http://')==0) {
+    $hostname = substr($hostname, 7);
+  }
+  elseif (strpos($hostname, 'https://')==0) {
+    $hostname = substr($hostname, 8);
+  }
+  return $hostname;
 }
