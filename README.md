@@ -7,8 +7,8 @@ There are some hard-coded checks:
 - disallow non-word characters and spaces in usernames
 - disallow non-word characters in firstnames
 - disallow non-word characters in lastnames
-- disallow free email (yahoo, gmail, hotmail, mailinator, etc)
-- allow registration only from specific email domains (admin specifies)
+- apply a blacklist: disallow specific email domains (admin specifies)
+- apply a whitelist: allow registration only from specific email domains (admin specifies)
 
 
 To configure how the validation is done, there is an Administrative configuration panel under
