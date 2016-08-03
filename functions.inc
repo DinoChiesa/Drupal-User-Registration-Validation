@@ -44,15 +44,21 @@ function dpchiesa_validate_userreg_available_checks() {
                     'negate' => true,
                     'regex' => '/^\pL[\pL ]+$/');
 
-  $domains = array('yahoo', 'googlemail', 'gmail', 'hotmail', 'live', 'outlook',
-                   'mailinator', 'dispostable', 'maildrop', 'tafmail', '6paq', 'harakirimail', 'yopmail',
-                   '33mail');
-  $slug = implode('|', $domains);
-  $checks[] = array('name' => 'email_disallow_free',
-                    'description' => 'disallow free email (yahoo, gmail, hotmail, mailinator, etc)',
+  // $domains = array('yahoo', 'googlemail', 'gmail', 'hotmail', 'live', 'outlook',
+  //                  'mailinator', 'dispostable', 'maildrop', 'tafmail', '6paq',
+  //                  'harakirimail', 'yopmail', '33mail');
+  // $slug = implode('|', $domains);
+  //
+  //                   'regex' => '/@(' . $slug . ')\./');
+
+  $checks[] = array('name' => 'email_domain_blacklist',
+                    'description' => 'disallow specific email domains',
                     'reason' => 'invalid email address',
                     'subject' => 'mail',
-                    'regex' => '/@(' . $slug . ')\./');
+                    'stringvar' => 'blacklisted_email_domains',
+                    'stringdefault' => dpchiesa_validate_userreg_blacklist_default(),
+                    'stringdescription' => 'a comma-separated list of email domains to block, eg "gmail, maildrop.com". If you use a string with no dot, it will block ALL domains.  Eg, use "gmail" to block gmail.co.uk, gmail.com, etc. Using spaces before or after the comma between entries is ok. Do not include quotes.',
+                    'function' => 'dpchiesa_validate_userreg_evaluate_email_domain_blacklist');
 
   $checks[] = array('name' => 'email_domain_whitelist',
                     'description' => 'allow registration only from specific email domains',
@@ -60,7 +66,7 @@ function dpchiesa_validate_userreg_available_checks() {
                     'subject' => 'mail',
                     'stringvar' => 'whitelisted_email_domains',
                     'stringdefault' => dpchiesa_validate_userreg_drupal_hostname(),
-                    'stringdescription' => 'a comma-separated list of email domains to whitelist, eg "example.org, apigee.com". Do not include quotes.',
+                    'stringdescription' => 'a comma-separated list of email domains to whitelist, eg "example.org, apigee.com". Using spaces before or after the comma between entries is ok. Do not include quotes.',
                     'function' => 'dpchiesa_validate_userreg_evaluate_email_domain_whitelist');
 
   return $checks;
@@ -89,7 +95,25 @@ function dpchiesa_validate_userreg_evaluate_email_domain_whitelist($subject) {
   $domains = array_map('preg_quote', array_map('trim', explode(',', $domainlist)));
   $slug = implode('|', $domains);
   $regex = '/@(' . $slug . ')$/';
-  return !preg_match($regex, $subject); // invert because, TRUE = invalid
+  return !preg_match($regex, $subject); // non-match = invalid email
+}
+
+
+function dpchiesa_validate_userreg_evaluate_email_domain_blacklist($subject) {
+  $prefix = 'dpchiesa_validate_userreg_';
+  $varname = $prefix . 'blacklisted_email_domains';
+  $domainlist = variable_get($varname, "gmail.com");
+  $domains = array_map('trim', explode(',', $domainlist));
+  // some of the domains have dots, some do not.
+  $regex_atoms = array_map(function ($d) {
+      if (strpos($d, '.') === false) {
+        return preg_quote($d . '.');
+      }
+      return preg_quote($d) . '$';
+  }, $domains);
+  $slug = implode('|', $regex_atoms);
+  $regex = '/@(' . $slug . ')/';
+  return preg_match($regex, $subject); // positive match = invalid email
 }
 
 
@@ -159,6 +183,13 @@ function dpchiesa_validate_userreg_evaluate_all_enabled_checks($form_values) {
 }
 
 
+function dpchiesa_validate_userreg_blacklist_default() {
+  $domains = array('yahoo', 'googlemail', 'gmail', 'hotmail', 'live', 'outlook',
+                  'mailinator', 'dispostable', 'maildrop', 'tafmail', '6paq',
+                  'harakirimail', 'yopmail', '33mail');
+  $slug = implode(', ', $domains);
+  return $slug;
+}
 
 function dpchiesa_validate_userreg_drupal_hostname() {
   global $GLOBALS;
