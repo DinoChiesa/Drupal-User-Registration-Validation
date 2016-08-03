@@ -10,9 +10,12 @@ module_load_include('inc', 'dpchiesa_validate_userreg', 'functions');
 
 function dpchiesa_validate_userreg_init() {
   if (arg(0) == 'admin') {
-    // for module-specific css
+    // for module-specific css and JS
     drupal_add_css('//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css',
                    array('type' => 'external'));
+
+    drupal_add_js(drupal_get_path('module', 'dpchiesa_validate_userreg') . '/toggle-chk.js');
+
     //$path = drupal_get_path('module', 'dpchiesa_validate_userreg');
     // drupal_add_css($path . '/dpchiesa_validate_userreg.css');
   }
@@ -137,12 +140,33 @@ function dpchiesa_validate_userreg_admin_form($form, &$form_state) {
         $tsuffix .= '</tbody></table>';
       }
     }
-    $form[$prefix][$varname] = array('#type' => 'checkbox',
-                                     //'#title'=> t($check['description']),
-                                     '#prefix' => $tprefix,
-                                     '#suffix' => $tsuffix,
-                                     '#attributes' => $fld_attributes
-                                     );
+    // add dynamic uncheck behavior if another checkbox is checked
+    if (isset($check['uncheck_when'])) {
+      // $v2 = $prefix . '_enabled_' . $check['uncheck_when'];
+      // $a['#states'] = array(
+      //   'unchecked' => array(
+      //     ('input[name="' . $v2 . '"]') => array('checked' => TRUE),
+      //     ('input[name="' . $varname . '"]') => array('checked' => TRUE)
+      //     )
+      //   );
+      //  watchdog('userreg_validation',
+      //           "states values !values",
+      //           array('!values' => var_export($a['#states'], TRUE)),
+      //           WATCHDOG_NOTICE);
+
+      // add an attribute to the HTML element, which will be found with
+      // the accompanying jQuery script for this module.
+      $v2 = $prefix . '_enabled_' . $check['uncheck_when'];
+      $fld_attributes['data-unset-if-checked'] = $v2;
+    }
+    $a = array('#type' => 'checkbox',
+               //'#title'=> t($check['description']),
+               '#prefix' => $tprefix,
+               '#suffix' => $tsuffix,
+               '#attributes' => $fld_attributes
+      );
+
+    $form[$prefix][$varname] = $a;
 
     if (isset($check['stringvar'])) {
       $varname = $prefix . '_' . $check['stringvar'];
@@ -154,15 +178,17 @@ function dpchiesa_validate_userreg_admin_form($form, &$form_state) {
       $fld_attributes = array('title' => t($check['stringdescription']));
       $defvalue = variable_get($varname,
                                (isset($check['stringdefault']))? $check['stringdefault'] : '');
-      $form[$prefix][$varname] = array('#type' => 'textfield',
-                                       '#prefix' => $tprefix,
-                                       '#suffix' => $tsuffix,
-                                       '#default_value' => $defvalue,
-                                       '#size' => 80,
-                                       '#maxlength' => 256,
-                                       '#attributes' => $fld_attributes,
-                                       '#required' => FALSE
+      $a = array('#type' => 'textfield',
+                 '#prefix' => $tprefix,
+                 '#suffix' => $tsuffix,
+                 '#default_value' => $defvalue,
+                 '#size' => 80,
+                 '#maxlength' => 256,
+                 '#attributes' => $fld_attributes,
+                 '#required' => FALSE
         );
+
+      $form[$prefix][$varname] = $a;
     }
     $tprefix = '<tr><td>';
   }
