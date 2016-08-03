@@ -8,7 +8,7 @@
 
 
 function dpchiesa_validate_userreg_available_checks() {
-  // A check must return true when the data is invalid.
+  // A check returns true when the data is invalid.
   //
   // Today, checks are based on regex, and follow this pattern:
   //   name : the name of the check. Also the suffix of the name of the drupal variable that
@@ -18,7 +18,11 @@ function dpchiesa_validate_userreg_available_checks() {
   //   regex : a regular expression
   //   subject : the property in the $form_state['values'] array that the regex is compared against
   //
-  // follow the pattern in which when the regex matches the subject.
+  // Other checks can call a function, which returns true when the check
+  // should flag an account as invalid.
+  //
+  // A single check should not include both a regex and a function.
+
   $checks = array();
   $checks[] = array('name' => 'name_disallow_spaces',
                     'description' => 'disallow spaces in usernames',
@@ -66,7 +70,7 @@ function dpchiesa_validate_userreg_available_checks() {
                     'subject' => 'mail',
                     'stringvar' => 'whitelisted_email_domains',
                     'stringdefault' => dpchiesa_validate_userreg_drupal_hostname(),
-                    'stringdescription' => 'a comma-separated list of email domains to whitelist, eg "example.org, apigee.com". Using spaces before or after the comma between entries is ok. Do not include quotes.',
+                    'stringdescription' => 'a comma-separated list of email domains to whitelist, eg "example.org, apigee.com". Using spaces before or after the comma between entries is ok. Do not include quotes. Note: it does not make sense to use both blacklist and whitelist.',
                     'function' => 'dpchiesa_validate_userreg_evaluate_email_domain_whitelist');
 
   return $checks;
@@ -95,7 +99,7 @@ function dpchiesa_validate_userreg_evaluate_email_domain_whitelist($subject) {
   $domains = array_map('preg_quote', array_map('trim', explode(',', $domainlist)));
   $slug = implode('|', $domains);
   $regex = '/@(' . $slug . ')$/';
-  return !preg_match($regex, $subject); // non-match = invalid email
+  return !boolval(preg_match($regex, $subject)); // non-match = invalid email
 }
 
 
@@ -113,7 +117,8 @@ function dpchiesa_validate_userreg_evaluate_email_domain_blacklist($subject) {
   }, $domains);
   $slug = implode('|', $regex_atoms);
   $regex = '/@(' . $slug . ')/';
-  return preg_match($regex, $subject); // positive match = invalid email
+  $result = boolval(preg_match($regex, $subject));
+  return $result;  // positive match = invalid email
 }
 
 
@@ -121,7 +126,7 @@ function dpchiesa_validate_userreg_apply_check($form_values, $check) {
   // A check returns true when the regex matches the subject.
   // TRUE implies invalid form data.
   //
-  // Today, all checks are regex based.
+  // Today, checks are regex based, or can call a function.
   // This function will need to get smarter if other kinds of checks are added.
 
   $subject = dpchiesa_validate_userreg_form_value($form_values, $check['subject']);
@@ -131,17 +136,17 @@ function dpchiesa_validate_userreg_apply_check($form_values, $check) {
 
   $result = FALSE;
   if (isset($check['regex'])) {
-    $result = preg_match($check['regex'], $subject);
+    $result = boolval(preg_match($check['regex'], $subject));
   }
   elseif (isset($check['function'])) {
-    $result = call_user_func($check['function'], $subject);
+    $result = boolval(call_user_func($check['function'], $subject));
   }
   else {
     $result = "invalid rule";
   }
 
-  if (is_bool($result) && isset($check['negate']) && $check['negate']) {
-    $result = !$result;
+  if (isset($check['negate']) && $check['negate']) {
+    $result = !boolval($result);
   }
 
   return $result;
@@ -155,11 +160,12 @@ function dpchiesa_validate_userreg_evaluate_check($form_values, $check, &$diagno
   $check_enabled = variable_get($varname, 0);
   $result = ($check_enabled) ? dpchiesa_validate_userreg_apply_check($form_values, $check) : FALSE;
 
-  $diagnostics[] = sprintf("%s enabled(%s) value(%s) result(%s)",
-                          $check['name'],
-                          $check_enabled,
-                          dpchiesa_validate_userreg_form_value($form_values, $check['subject']),
-                          var_export($result, true));
+  $diagnostics[] = sprintf("%s enabled(%s) field(%s) subject(%s) result(%s)",
+                           $check['name'],
+                           $check_enabled,
+                           $check['subject'],
+                           dpchiesa_validate_userreg_form_value($form_values, $check['subject']),
+                           var_export($result, true));
   return ($result === TRUE);
 }
 

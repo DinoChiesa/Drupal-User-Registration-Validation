@@ -152,11 +152,12 @@ function dpchiesa_validate_userreg_admin_form($form, &$form_state) {
         $tsuffix .= '</tbody></table>';
       }
       $fld_attributes = array('title' => t($check['stringdescription']));
-      $value = variable_get($varname, dpchiesa_validate_userreg_drupal_hostname());
+      $defvalue = variable_get($varname,
+                               (isset($check['stringdefault']))? $check['stringdefault'] : '');
       $form[$prefix][$varname] = array('#type' => 'textfield',
                                        '#prefix' => $tprefix,
                                        '#suffix' => $tsuffix,
-                                       '#default_value' => $value,
+                                       '#default_value' => $defvalue,
                                        '#size' => 80,
                                        '#maxlength' => 256,
                                        '#attributes' => $fld_attributes,
