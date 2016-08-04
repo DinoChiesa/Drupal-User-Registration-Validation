@@ -62,7 +62,7 @@ function dpchiesa_validate_userreg_available_checks() {
                     'uncheck_when' => 'email_domain_whitelist',
                     'stringvar' => 'blacklisted_email_domains',
                     'stringdefault' => dpchiesa_validate_userreg_blacklist_default(),
-                    'stringdescription' => 'a comma-separated list of email domains to block, eg "gmail, maildrop.com". If you use a string with no dot, it will block ALL domains.  Eg, use "gmail" to block gmail.co.uk, gmail.com, etc. Using spaces before or after the comma between entries is ok. Do not include quotes.',
+                    'stringdescription' => 'a comma-separated list of email domains to block, eg "gmail, maildrop.com". If you use a string with no dot, it will block ALL domains.  Eg, use "gmail" to block gmail.co.uk, gmail.com, etc. Using spaces before or after the comma between entries is ok. Do not include quotes. You can use only one of blacklist and whitelist.',
                     'function' => 'dpchiesa_validate_userreg_evaluate_email_domain_blacklist');
 
   $checks[] = array('name' => 'email_domain_whitelist',
@@ -72,7 +72,7 @@ function dpchiesa_validate_userreg_available_checks() {
                     'uncheck_when' => 'email_domain_blacklist',
                     'stringvar' => 'whitelisted_email_domains',
                     'stringdefault' => dpchiesa_validate_userreg_drupal_hostname(),
-                    'stringdescription' => 'a comma-separated list of email domains to whitelist, eg "example.org, apigee.com". Using spaces before or after the comma between entries is ok. Do not include quotes. Note: it does not make sense to use both blacklist and whitelist.',
+                    'stringdescription' => 'a comma-separated list of email domains to whitelist, eg "example.org, apigee.com". Using spaces before or after the comma between entries is ok. Do not include quotes. You can use only one of blacklist and whitelist.',
                     'function' => 'dpchiesa_validate_userreg_evaluate_email_domain_whitelist');
 
   return $checks;
