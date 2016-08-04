@@ -182,8 +182,8 @@ function dpchiesa_validate_userreg_admin_form($form, &$form_state) {
                  '#prefix' => $tprefix,
                  '#suffix' => $tsuffix,
                  '#default_value' => $defvalue,
-                 '#size' => 80,
-                 '#maxlength' => 256,
+                 '#size' => 100,
+                 '#maxlength' => 512,
                  '#attributes' => $fld_attributes,
                  '#required' => FALSE
         );
