@@ -192,9 +192,11 @@ function dpchiesa_validate_userreg_evaluate_all_enabled_checks($form_values) {
 
 
 function dpchiesa_validate_userreg_blacklist_default() {
-  $domains = array('yahoo', 'googlemail', 'gmail', 'hotmail', 'live', 'outlook',
-                  'mailinator', 'dispostable', 'maildrop', 'tafmail', '6paq',
-                  'harakirimail', 'yopmail', '33mail');
+  $domains = array('yahoo', 'ymail', 'rocketmail',
+                   'gmail', 'googlemail',
+                   'hotmail', 'live', 'outlook',
+                   'mailinator', 'dispostable', 'maildrop', 'tafmail', '6paq',
+                   'harakirimail', 'yopmail', '33mail');
   $slug = implode(', ', $domains);
   return $slug;
 }
